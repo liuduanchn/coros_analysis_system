@@ -1,0 +1,229 @@
+{
+  "training_analysis": {
+    "summary": {
+      "total_days": 28,
+      "avg_training_load": 432.7,
+      "max_training_load": 795,
+      "avg_rhr": 54.5,
+      "min_rhr": 45,
+      "avg_hrv": 51.2,
+      "vo2max_latest": 50.9,
+      "vo2max_change": 2.6,
+      "total_distance_km": 220.9,
+      "total_duration_hours": 24.7
+    },
+    "training_load": {
+      "acute_load": 311.7,
+      "chronic_load": 370.9,
+      "load_ratio": 1.02,
+      "status": "训练平衡",
+      "recommendation": "训练负荷处于健康范围，继续保持",
+      "trend": "稳定",
+      "training_load_status": "适中"
+    },
+    "fitness_level": {
+      "vo2max": {
+        "current": 50.9,
+        "change": 2.6,
+        "rating": "良好"
+      },
+      "resting_heart_rate": {
+        "current": 57,
+        "change": -5,
+        "rating": "良好"
+      },
+      "stamina": {
+        "current": 71,
+        "change_7d": 76
+      },
+      "lactate_threshold_hr": 168,
+      "lactate_threshold_pace": 262.3
+    },
+    "overtraining_risk": {
+      "risk_level": "低",
+      "risk_score": 1,
+      "risk_factors": [
+        "疲劳率偏高"
+      ],
+      "recommendation": "当前训练恢复平衡良好，继续保持",
+      "monitoring_suggestions": [
+        "继续监控静息心率",
+        "关注HRV趋势",
+        "注意睡眠质量",
+        "评估主观疲劳感"
+      ]
+    },
+    "recommendations": [
+      "VO2max持续提升，训练效果良好！"
+    ],
+    "activity_analysis": {
+      "total_activities": 20,
+      "sport_distribution": {
+        "力量": 7,
+        "游泳": 6,
+        "骑行": 4,
+        "跑步": 3
+      },
+      "avg_load_by_sport": {
+        "力量": 308.7,
+        "游泳": 253.3,
+        "跑步": 332.0,
+        "骑行": 297.8
+      },
+      "heart_rate": {
+        "avg_hr_overall": 161.6,
+        "max_hr_overall": 195
+      },
+      "power": {
+        "avg_power_overall": 224.6,
+        "max_avg_power": 273
+      }
+    }
+  },
+  "sleep_analysis": {
+    "summary": {
+      "total_sleep_avg": 459.7,
+      "deep_sleep_avg": 90.5,
+      "rem_sleep_avg": 94.2,
+      "light_sleep_avg": 251.3,
+      "awake_time_avg": 23.6,
+      "deep_sleep_percentage": 19.7,
+      "rem_sleep_percentage": 20.5,
+      "sleep_efficiency": 94.9
+    },
+    "sleep_stages": {
+      "deep_sleep": {
+        "average_minutes": 90.5,
+        "rating": "优秀",
+        "trend": "stable",
+        "recommendation": "深睡眠充足，继续保持良好作息习惯"
+      },
+      "rem_sleep": {
+        "average_minutes": 94.2,
+        "rating": "优秀",
+        "recommendation": "REM睡眠充足，有利于记忆巩固和情绪调节"
+      },
+      "light_sleep": {
+        "average_minutes": 251.3,
+        "percentage": 54.7
+      },
+      "awake_episodes": {
+        "average_awake_minutes": 23.6,
+        "max_awake_minutes": 40,
+        "awake_episodes_count": "N/A",
+        "sleep_continuity": "disrupted"
+      }
+    },
+    "sleep_quality": {
+      "overall_score": 82.4,
+      "rating": "良好",
+      "factors": {
+        "deep_sleep_contribution": 40,
+        "rem_sleep_contribution": 30,
+        "sleep_continuity_contribution": 30
+      }
+    },
+    "heart_rate": {
+      "average_hr": 58.3,
+      "min_hr": 42,
+      "max_hr": 85.3,
+      "hrv_estimate": 4.44,
+      "recovery_indicator": "恢复良好"
+    },
+    "trends": {
+      "deep_sleep_trend": "下降",
+      "recent_deep_avg": 88.4,
+      "total_sleep_trend": "stable",
+      "consistency_score": 89.9
+    },
+    "recommendations": [
+      "深睡眠占比偏低，建议：保持规律作息、睡前避免蓝光、保持卧室凉爽"
+    ]
+  },
+  "trend_analysis": {
+    "date_range": {
+      "start": "2026-04-15",
+      "end": "2026-05-12",
+      "days": 28
+    },
+    "training_trends": {
+      "training_load": {
+        "direction": "稳定",
+        "slope": 0.7531,
+        "recent_avg": 443.0,
+        "baseline_avg": 434.0,
+        "change_percentage": 2.1
+      },
+      "training_load_ratio": {
+        "direction": "稳定",
+        "current": 1.02,
+        "status": "训练平衡"
+      },
+      "distance": {
+        "direction": "稳定",
+        "recent_weekly_km": 64.4,
+        "change_percentage": 30.3
+      },
+      "duration": {
+        "direction": "稳定",
+        "recent_weekly_hours": 5.8
+      }
+    },
+    "recovery_trends": {
+      "hrv": {
+        "direction": "稳定",
+        "recent_avg": 55.6,
+        "baseline_avg": 46.3,
+        "change_percentage": 20.1,
+        "status": "稳定"
+      },
+      "resting_heart_rate": {
+        "direction": "稳定",
+        "recent_avg": 55.0,
+        "baseline_avg": 54.3,
+        "change": 0.7
+      },
+      "fatigue_rate": {
+        "direction": "稳定",
+        "recent_avg": 60.7,
+        "status": "需要恢复"
+      }
+    },
+    "fitness_trends": {
+      "vo2max": {
+        "direction": "稳定",
+        "current": 50.9,
+        "change": 2.6,
+        "recent_trend": "稳定"
+      },
+      "stamina": {
+        "direction": "稳定",
+        "current": 71,
+        "change": -16
+      },
+      "lactate_threshold_hr": {
+        "direction": "稳定",
+        "current": 168,
+        "interpretation": "待观察"
+      }
+    },
+    "sleep_trends": {
+      "total_sleep": {
+        "direction": "稳定",
+        "recent_avg": 474.3,
+        "change_minutes": 38.9
+      },
+      "deep_sleep": {
+        "direction": "稳定",
+        "recent_avg": 85.7
+      },
+      "rem_sleep": {
+        "direction": "稳定",
+        "recent_avg": 110.6
+      }
+    },
+    "insights": [
+      "整体趋势稳定，继续保持"
+    ]
+  }
+}

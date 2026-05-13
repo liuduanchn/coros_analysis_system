@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COROS 运动数据分析报告</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            padding-left: 10px;
+            border-left: 4px solid #3498db;
+        }
+        .summary-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        .status-excellent { color: #27ae60; }
+        .status-good { color: #2980b9; }
+        .status-warning { color: #f39c12; }
+        .status-danger { color: #e74c3c; }
+        .recommendation {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .plot-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .plot-container img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏃 COROS 运动数据分析报告</h1>
+    <p style="text-align: center; color: #7f8c8d;">生成时间：2026年05月13日 16:10</p>
+
+    <div class="summary-box">
+        <h2 style="color: white; border: none;">📊 数据摘要</h2>
+        <div class="metric-grid">
+
+            <div class="metric-card" style="background: rgba(255,255,255,0.2); color: white;">
+                <div class="metric-value">504.3</div>
+                <div class="metric-label">平均训练负荷</div>
+            </div>
+            <div class="metric-card" style="background: rgba(255,255,255,0.2); color: white;">
+                <div class="metric-value">49.0</div>
+                <div class="metric-label">VO2max</div>
+            </div>
+            <div class="metric-card" style="background: rgba(255,255,255,0.2); color: white;">
+                <div class="metric-value">54.4 bpm</div>
+                <div class="metric-label">平均静息心率</div>
+            </div>
+
+            <div class="metric-card" style="background: rgba(255,255,255,0.2); color: white;">
+                <div class="metric-value">442.1 min</div>
+                <div class="metric-label">平均睡眠时长</div>
+            </div>
+            <div class="metric-card" style="background: rgba(255,255,255,0.2); color: white;">
+                <div class="metric-value">20.0%</div>
+                <div class="metric-label">深睡眠占比</div>
+            </div>
+
+        </div>
+    </div>
+
+    <h2>🏋️ 训练分析</h2>
+
+    <h3>训练负荷分析</h3>
+    <table>
+        <tr>
+            <th>指标</th>
+            <th>数值</th>
+            <th>状态</th>
+        </tr>
+        <tr>
+            <td>急性负荷 (ATI)</td>
+            <td>499.3</td>
+            <td rowspan="2" class="status-excellent">训练平衡</td>
+        </tr>
+        <tr>
+            <td>慢性负荷 (CTI)</td>
+            <td>467.1</td>
+        </tr>
+        <tr>
+            <td>负荷比值 (ATI/CTI)</td>
+            <td>1.03</td>
+            <td class="status-excellent">训练负荷处于健康范围，继续保持</td>
+        </tr>
+    </table>
+
+    <h3>过度训练风险评估</h3>
+    <p>风险等级：<span class="status-excellent">低</span></p>
+    <p>风险因素：无明显风险因素</p>
+    <p>建议：当前训练恢复平衡良好，继续保持</p>
+
+    <h2>😴 睡眠分析</h2>
+
+    <div class="metric-grid">
+        <div class="metric-card">
+            <div class="metric-value">442.1</div>
+            <div class="metric-label">平均睡眠时长 (分钟)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">88.6</div>
+            <div class="metric-label">平均深睡眠 (分钟)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">88.7</div>
+            <div class="metric-label">平均REM睡眠 (分钟)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">94.3%</div>
+            <div class="metric-label">睡眠效率</div>
+        </div>
+    </div>
+
+    <h3>睡眠质量评估</h3>
+    <p>综合评级：<span class="status-good">良好</span></p>
+
+    <h2>📈 趋势分析</h2>
+
+    <h3>训练趋势</h3>
+    <table>
+        <tr>
+            <th>指标</th>
+            <th>趋势方向</th>
+            <th>近期平均值</th>
+        </tr>
+
+        <tr>
+            <td>training_load</td>
+            <td>稳定</td>
+            <td>532.1</td>
+        </tr>
+
+        <tr>
+            <td>training_load_ratio</td>
+            <td>稳定</td>
+            <td>N/A</td>
+        </tr>
+
+        <tr>
+            <td>distance</td>
+            <td>稳定</td>
+            <td>47.9</td>
+        </tr>
+
+        <tr>
+            <td>duration</td>
+            <td>稳定</td>
+            <td>N/A</td>
+        </tr>
+
+    </table>
+
+    <h3>💡 数据洞察</h3>
+    <ul>
+<li>整体趋势稳定，继续保持</li>
+
+    </ul>
+
+    <h2>📊 可视化图表</h2>
+
+    <div class="plot-container">
+        <img src="training_load_trend.png" alt="training_load_trend.png">
+    </div>
+
+    <div class="plot-container">
+        <img src="hrv_trend.png" alt="hrv_trend.png">
+    </div>
+
+    <div class="plot-container">
+        <img src="rhr_trend.png" alt="rhr_trend.png">
+    </div>
+
+    <div class="plot-container">
+        <img src="vo2max_trend.png" alt="vo2max_trend.png">
+    </div>
+
+    <div class="plot-container">
+        <img src="sleep_stages.png" alt="sleep_stages.png">
+    </div>
+
+    <div class="plot-container">
+        <img src="sleep_quality.png" alt="sleep_quality.png">
+    </div>
+
+    <div class="plot-container">
+        <img src="comprehensive_dashboard.png" alt="comprehensive_dashboard.png">
+    </div>
+
+    <h2>💡 综合建议</h2>
+
+    <div class="recommendation">
+        训练状态良好，继续保持！
+    </div>
+
+    <div class="recommendation">
+        睡眠数据良好，继续保持！
+    </div>
+
+    <div class="footer">
+        <p>本报告由 COROS 分析系统自动生成</p>
+        <p>数据来源：COROS Training Hub via MCP Server</p>
+    </div>
+</body>
+</html>

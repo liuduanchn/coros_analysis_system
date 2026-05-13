@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COROS 运动数据仪表板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+  :root {
+    --primary: #0057B8;
+    --primary-dark: #003f87;
+    --accent: #00C8B5;
+    --accent2: #FF6B35;
+    --bg: #0d1117;
+    --card-bg: #161b22;
+    --card-border: #21262d;
+    --text: #e6edf3;
+    --text-secondary: #8b949e;
+    --good: #3fb950;
+    --warn: #d29922;
+    --danger: #f85149;
+    --sleep-deep: #3b6eff;
+    --sleep-light: #8ab4f8;
+    --sleep-rem: #a78bfa;
+    --sleep-awake: #94a3b8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Microsoft YaHei', 'PingFang SC', -apple-system, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  /* ===== TOP BAR ===== */
+  .topbar {
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+    border-bottom: 1px solid var(--card-border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .topbar-logo svg { width: 32px; height: 32px; }
+  .topbar-title { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+  .topbar-title span { color: var(--accent); }
+  .topbar-actions { display: flex; align-items: center; gap: 12px; }
+  /* ===== UPLOAD AREA ===== */
+  .upload-section {
+    background: var(--card-bg);
+    border: 1.5px dashed var(--card-border);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    margin: 28px 28px 0;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+  .upload-section:hover, .upload-section.drag-over {
+    border-color: var(--accent);
+    background: rgba(0,200,181,0.04);
+  }
+  .upload-section input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-title { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+  .upload-subtitle { font-size: 14px; color: var(--text-secondary); }
+  .upload-hint {
+    margin-top: 16px;
+    padding: 12px 20px;
+    background: rgba(0,87,184,0.15);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: left;
+    display: inline-block;
+    max-width: 600px;
+  }
+  .upload-hint b { color: var(--accent); }
+  /* ===== DATA SOURCE TABS ===== */
+  .data-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 20px 28px 0;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 1px solid var(--card-border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .tab-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+  .tab-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+  /* ===== DATE RANGE ===== */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 28px 0;
+    flex-wrap: wrap;
+  }
+  .filter-bar label { font-size: 13px; color: var(--text-secondary); }
+  .range-btn {
+    padding: 6px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .range-btn.active, .range-btn:hover {
+    background: rgba(0,200,181,0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  /* ===== METRIC CARDS ===== */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 16px;
+    padding: 24px 28px 0;
+  }
+  .metric-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .metric-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent-color, var(--accent));
+  }
+  .metric-card .icon { font-size: 22px; margin-bottom: 8px; }
+  .metric-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .metric-card .label { font-size: 12px; color: var(--text-secondary); }
+  .metric-card .trend {
+    font-size: 12px;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .trend-up { color: var(--good); }
+  .trend-down { color: var(--danger); }
+  .trend-flat { color: var(--text-secondary); }
+  /* ===== CHART GRID ===== */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 24px 28px 0;
+  }
+  .charts-grid .full-width { grid-column: 1 / -1; }
+  @media (max-width: 900px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .charts-grid .full-width { grid-column: 1; }
+  }
+  .chart-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .chart-title {
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chart-title .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .chart-subtitle { font-size: 12px; color: var(--text-secondary); }
+  .chart-canvas-wrap { position: relative; height: 220px; }
+  .chart-canvas-wrap.tall { height: 280px; }
+  /* ===== ACTIVITY TABLE ===== */
+  .activity-section {
+    padding: 24px 28px 0;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .table-wrap {
+    overflow-x: auto;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    border-bottom: 1px solid var(--card-border);
+    background: rgba(255,255,255,0.02);
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(33,38,45,0.6);
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(0,200,181,0.04); }
+  .sport-badge {
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .badge-run { background: rgba(63,185,80,0.15); color: var(--good); }
+  .badge-ride { background: rgba(59,110,255,0.15); color: #5b9cf6; }
+  .badge-swim { background: rgba(0,200,181,0.15); color: var(--accent); }
+  .badge-strength { background: rgba(248,81,73,0.15); color: var(--danger); }
+  .badge-other { background: rgba(139,148,158,0.15); color: var(--text-secondary); }
+  /* ===== STATUS / BADGES ===== */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .status-good { background: rgba(63,185,80,0.15); color: var(--good); }
+  .status-warn { background: rgba(210,153,34,0.15); color: var(--warn); }
+  .status-danger { background: rgba(248,81,73,0.15); color: var(--danger); }
+  .status-neutral { background: rgba(139,148,158,0.15); color: var(--text-secondary); }
+  /* ===== FOOTER ===== */
+  footer {
+    text-align: center;
+    padding: 32px 28px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin-top: 16px;
+  }
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    text-align: center;
+    padding: 48px;
+    color: var(--text-secondary);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  /* ===== LOADING ===== */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 24px;
+    color: var(--text-secondary);
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--card-border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* ===== BUTTONS ===== */
+  .btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 500;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-accent { background: var(--accent); color: #0d1117; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--text-secondary);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  /* ===== SLEEP BREAKDOWN ===== */
+  .sleep-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+  /* ===== TOOLTIP ===== */
+  .card-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.07);
+    color: var(--text-secondary);
+  }
+  /* ===== EXPORT ===== */
+  .export-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px 0;
+  }
+  .export-bar .info-text { font-size: 13px; color: var(--text-secondary); }
+  /* ===== NOTIFICATIONS ===== */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-size: 14px;
+    z-index: 9999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s;
+    max-width: 340px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--good); }
+  .toast.error { border-color: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="14" stroke="#00C8B5" stroke-width="2"/>
+      <path d="M16 8 L16 16 L22 20" stroke="#00C8B5" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="16" cy="16" r="2" fill="#00C8B5"/>
+    </svg>
+    <span class="topbar-title">COROS <span>运动数据仪表板</span></span>
+  </div>
+  <div class="topbar-actions">
+    <span id="dataInfo" style="font-size:13px;color:var(--text-secondary);">尚未加载数据</span>
+    <span id="connectionStatus" class="status-badge status-neutral" style="font-size:11px;">
+      <span id="statusDot" style="width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block;"></span>
+      <span id="statusText">未连接</span>
+    </span>
+    <button class="btn btn-primary" onclick="loadFromAPI()" title="从本地 API 服务器加载数据">
+      🔄 加载 COROS 数据
+    </button>
+    <button class="btn btn-ghost" onclick="clearAllData()">清空数据</button>
+    <button class="btn btn-accent" onclick="loadSampleData()">📊 演示数据</button>
+  </div>
+</header>
+
+<!-- API STATUS SECTION -->
+<div class="upload-section" id="uploadArea" style="border-style:solid;cursor:default;">
+  <div style="display:flex;align-items:center;justify-content:center;gap:32px;flex-wrap:wrap;">
+    <div style="text-align:center;">
+      <div class="upload-icon" style="font-size:36px;">🔌</div>
+      <div class="upload-title" style="font-size:16px;">COROS API 服务</div>
+      <div class="upload-subtitle" id="apiStatus">需要先启动 API 服务器</div>
+      <div style="margin-top:8px;font-size:12px;color:var(--text-secondary);">
+        运行命令: <code style="background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:4px;">python api_server.py</code>
+      </div>
+    </div>
+    <div style="text-align:center;">
+      <div class="upload-icon" style="font-size:36px;">⏱️</div>
+      <div class="upload-title" style="font-size:16px;">数据范围</div>
+      <div class="upload-subtitle">获取最近多长时间的数据？</div>
+      <div style="margin-top:8px;">
+        <select id="weeksSelect" style="background:var(--card-bg);color:var(--text);border:1px solid var(--card-border);border-radius:6px;padding:6px 12px;font-size:13px;">
+          <option value="4">近 1 个月</option>
+          <option value="12">近 3 个月</option>
+          <option value="26" selected>近 6 个月</option>
+          <option value="52">近 1 年</option>
+        </select>
+      </div>
+    </div>
+    <div style="text-align:center;">
+      <div class="upload-icon" style="font-size:36px;">📡</div>
+      <div class="upload-title" style="font-size:16px;">连接状态</div>
+      <div class="upload-subtitle" id="lastUpdate">-</div>
+      <div style="margin-top:8px;">
+        <button class="btn btn-primary" onclick="testConnection()" style="font-size:13px;padding:6px 16px;">
+          🔗 测试连接
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DATA FORMAT HINT -->
+<div style="padding:0 28px;margin-top:12px;">
+  <div class="upload-hint" style="display:inline-block;max-width:700px;">
+    <b>💡 使用说明：</b> 点击顶部「🔄 加载 COROS 数据」按钮从本地 API 获取数据。<br>
+    如需停止服务器，按 <code>Ctrl+C</code>。<br>
+    <b>API 端点：</b> <code>/api/daily_metrics</code> · <code>/api/sleep_data</code> · <code>/api/activities</code> · <code>/api/all</code>
+  </div>
+</div>
+
+<!-- DATA TABS -->
+<div class="data-tabs">
+  <button class="tab-btn active" onclick="switchView('overview')">📈 总览</button>
+  <button class="tab-btn" onclick="switchView('training')">💪 训练</button>
+  <button class="tab-btn" onclick="switchView('sleep')">😴 睡眠</button>
+  <button class="tab-btn" onclick="switchView('activities')">🏃 活动记录</button>
+</div>
+
+<!-- DATE FILTER -->
+<div class="filter-bar">
+  <label>时间范围：</label>
+  <button class="range-btn active" onclick="setRange(7, this)">近7天</button>
+  <button class="range-btn" onclick="setRange(14, this)">近14天</button>
+  <button class="range-btn" onclick="setRange(30, this)">近30天</button>
+  <button class="range-btn" onclick="setRange(90, this)">近3月</button>
+  <button class="range-btn" onclick="setRange(180, this)">近6月</button>
+  <button class="range-btn" onclick="setRange(365, this)">近1年</button>
+  <button class="range-btn" onclick="setRange(9999, this)">全部</button>
+</div>
+
+<!-- EXPORT BAR -->
+<div class="export-bar">
+  <span class="info-text" id="rangeInfo">-</span>
+  <div style="display:flex;gap:8px;">
+    <button class="btn btn-ghost" onclick="exportCurrentView()">⬇ 导出图表</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading" id="loadingEl">
+  <div class="spinner"></div>
+  正在处理数据...
+</div>
+
+<!-- ============================================================ OVERVIEW VIEW ============================================================ -->
+<div id="view-overview">
+  <div class="metrics-grid" id="metricsGrid">
+    <div class="empty-state" style="grid-column:1/-1;">
+      <div class="icon">⌛</div>
+      <p>点击顶部「🔄 加载 COROS 数据」从 API 获取真实数据，或点击「📊 演示数据」查看示例</p>
+    </div>
+  </div>
+  <div class="charts-grid" id="overviewCharts">
+    <!-- charts injected by JS -->
+  </div>
+</div>
+
+<!-- ============================================================ TRAINING VIEW ============================================================ -->
+<div id="view-training" style="display:none;">
+  <div class="charts-grid" id="trainingCharts"></div>
+</div>
+
+<!-- ============================================================ SLEEP VIEW ============================================================ -->
+<div id="view-sleep" style="display:none;">
+  <div class="charts-grid" id="sleepCharts"></div>
+</div>
+
+<!-- ============================================================ ACTIVITIES VIEW ============================================================ -->
+<div id="view-activities" style="display:none;">
+  <div class="activity-section">
+    <div class="section-title">🏃 活动记录 <span id="actCount" class="card-tag"></span></div>
+    <div class="table-wrap">
+      <table id="activityTable">
+        <thead>
+          <tr>
+            <th>日期</th><th>名称</th><th>运动类型</th><th>时长</th><th>距离</th><th>均心率</th><th>热量</th><th>训练负荷</th>
+          </tr>
+        </thead>
+        <tbody id="activityBody">
+          <tr><td colspan="8"><div class="empty-state"><div class="icon">🏅</div><p>暂无活动数据</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<footer>
+  COROS 运动数据仪表板 · 数据在本地处理，不上传任何服务器 · 
+  <a href="https://www.coros.com" style="color:var(--accent);text-decoration:none;" target="_blank">COROS官网</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   GLOBAL STATE
+   ============================================================ */
+let state = {
+  daily: [],    // [{date, rhr, hrv, training_load, vo2max, ati, cti, tired_rate, distance, duration}, ...]
+  sleep: [],    // [{date, total_minutes, deep_minutes, light_minutes, rem_minutes, awake_minutes, quality_score}, ...]
+  activities: [], // [{date, name, sport_type, duration_seconds, distance_meters, avg_hr, calories, training_load}, ...]
+  rangeDays: 7,
+  currentView: 'overview',
+  charts: {}
+};
+
+/* ============================================================
+   COLUMN MAPPING
+   ============================================================ */
+const COL_MAP = {
+  daily: {
+    date: ['date','日期','记录日期'],
+    rhr: ['rhr','静息心率','resting_hr','resting heart rate'],
+    hrv: ['hrv','avg_sleep_hrv','心率变异性','hrv_score'],
+    training_load: ['training_load','训练负荷','load'],
+    vo2max: ['vo2max','最大摄氧量','vo2_max'],
+    ati: ['ati','急性负荷','acute_load'],
+    cti: ['cti','慢性负荷','chronic_load'],
+    tired_rate: ['tired_rate','疲劳指数','fatigue'],
+    distance: ['distance','距离','distance_meters'],
+    duration: ['duration','时长','duration_seconds'],
+    stamina: ['stamina_level','体能水平','stamina'],
+    lthr: ['lthr','乳酸阈值心率','threshold_hr']
+  },
+  sleep: {
+    date: ['date','日期','记录日期'],
+    total_minutes: ['total_minutes','total_duration_minutes','睡眠时长','total_sleep'],
+    deep_minutes: ['deep_minutes','深睡眠','deep_sleep_minutes'],
+    light_minutes: ['light_minutes','浅睡眠','light_sleep_minutes'],
+    rem_minutes: ['rem_minutes','rem睡眠','rem_sleep_minutes'],
+    awake_minutes: ['awake_minutes','清醒时长','awake'],
+    quality_score: ['quality_score','睡眠质量','sleep_score','quality']
+  },
+  activities: {
+    date: ['date','日期','start_time','开始时间'],
+    name: ['name','活动名称','activity_name','名称'],
+    sport_type: ['sport_type','sport_name','运动类型','type'],
+    duration_seconds: ['duration_seconds','时长','duration','time'],
+    distance_meters: ['distance_meters','距离','distance'],
+    avg_hr: ['avg_hr','average_hr','均心率','avg_heart_rate'],
+    calories: ['calories','热量','卡路里'],
+    training_load: ['training_load','训练负荷','load']
+  }
+};
+
+function mapColumns(row, mapping) {
+  const result = {};
+  const lowerRow = {};
+  for (const k of Object.keys(row)) {
+    lowerRow[k.toLowerCase().trim()] = row[k];
+  }
+  for (const [target, aliases] of Object.entries(mapping)) {
+    for (const alias of aliases) {
+      if (lowerRow[alias.toLowerCase()] !== undefined) {
+        result[target] = lowerRow[alias.toLowerCase()];
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+/* ============================================================
+   PARSE DATE  (supports YYYYMMDD, YYYY-MM-DD, YYYY/MM/DD, etc.)
+   ============================================================ */
+function parseDate(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  // YYYYMMDD
+  if (/^\d{8}$/.test(s)) {
+    return new Date(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8));
+  }
+  const d = new Date(s.replace(/\//g,'-'));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function dateStr(d) {
+  return d ? d.toISOString().slice(0,10) : '';
+}
+
+/* ============================================================
+   DETECT DATA TYPE
+   ============================================================ */
+function detectType(headers) {
+  const h = headers.map(x=>x.toLowerCase().trim());
+  const dailyScore = ['rhr','hrv','training_load','vo2max','ati','cti','tired_rate','resting'].filter(k=>h.some(x=>x.includes(k))).length;
+  const sleepScore = ['deep','rem','sleep','awake'].filter(k=>h.some(x=>x.includes(k))).length;
+  const actScore = ['distance','calories','sport','activity','avg_hr'].filter(k=>h.some(x=>x.includes(k))).length;
+  if (sleepScore >= 2) return 'sleep';
+  if (actScore >= 2) return 'activities';
+  return 'daily'; // default
+}
+
+/* ============================================================
+   API CONFIG
+   ============================================================ */
+const API_BASE = 'http://localhost:5000';
+
+/* ============================================================
+   API CONNECTION & DATA LOADING
+   ============================================================ */
+async function testConnection() {
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const apiStatus = document.getElementById('apiStatus');
+
+  statusText.textContent = '连接中...';
+  statusDot.style.background = 'var(--warn)';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/status`);
+    if (res.ok) {
+      const data = await res.json();
+      statusDot.style.background = 'var(--good)';
+      statusText.textContent = '已连接';
+      apiStatus.textContent = '✅ API 服务正常';
+      showToast('✅ API 连接成功', 'success');
+      return true;
+    }
+  } catch (e) {
+    statusDot.style.background = 'var(--danger)';
+    statusText.textContent = '未连接';
+    apiStatus.textContent = '❌ 无法连接，请确保 API 服务器已启动';
+    showToast('❌ API 连接失败，请运行: python api_server.py', 'error');
+    return false;
+  }
+  return false;
+}
+
+async function loadFromAPI() {
+  showLoading(true);
+  const weeks = parseInt(document.getElementById('weeksSelect').value);
+
+  try {
+    // 尝试获取所有数据
+    const res = await fetch(`${API_BASE}/api/all?weeks=${weeks}`);
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    // 处理每日指标
+    if (data.daily_metrics && data.daily_metrics.records) {
+      state.daily = data.daily_metrics.records.map(r => ({
+        date: parseDate(String(r.date)),
+        rhr: r.rhr || r.resting_hr || null,
+        hrv: r.avg_sleep_hrv || r.hrv || null,
+        training_load: r.training_load || null,
+        vo2max: r.vo2max || null,
+        ati: r.ati || null,
+        cti: r.cti || null,
+        tired_rate: r.tired_rate || null,
+        distance: r.distance || r.distance_meters || null,
+        duration: r.duration || r.duration_seconds || null,
+        stamina: r.stamina_level || null,
+        lthr: r.lthr || null
+      })).filter(r => r.date instanceof Date && !isNaN(r.date));
+    }
+
+    // 处理睡眠数据
+    if (data.sleep_data && data.sleep_data.records) {
+      state.sleep = data.sleep_data.records.map(r => ({
+        date: parseDate(String(r.date)),
+        total_minutes: r.total_duration_minutes || r.total_minutes || null,
+        deep_minutes: r.phases?.deep_minutes || r.deep_minutes || null,
+        light_minutes: r.phases?.light_minutes || r.light_minutes || null,
+        rem_minutes: r.phases?.rem_minutes || r.rem_minutes || null,
+        awake_minutes: r.phases?.awake_minutes || r.awake_minutes || null,
+        quality_score: r.quality_score || null,
+        avg_hr: r.avg_hr || null
+      })).filter(r => r.date instanceof Date && !isNaN(r.date));
+    }
+
+    // 处理活动记录
+    if (data.activities && data.activities.activities) {
+      state.activities = data.activities.activities.map(r => ({
+        date: parseDate(r.start_time || r.date),
+        name: r.name || r.activity_name || null,
+        sport_type: r.sport_name || r.sport_type || null,
+        duration_seconds: r.duration_seconds || null,
+        distance_meters: r.distance_meters || null,
+        avg_hr: r.avg_hr || null,
+        calories: r.calories || null,
+        training_load: r.training_load || null
+      })).filter(r => r.date instanceof Date && !isNaN(r.date));
+    }
+
+    // 更新状态显示
+    if (data.using_mock) {
+      document.getElementById('lastUpdate').textContent = '⚠️ 使用模拟数据（API 不可用）';
+      showToast('⚠️ API 不可用，已加载模拟数据', 'warn');
+    } else {
+      document.getElementById('lastUpdate').textContent = `✅ 已更新: ${new Date().toLocaleTimeString()}`;
+      document.getElementById('statusDot').style.background = 'var(--good)';
+      document.getElementById('statusText').textContent = '已连接';
+      showToast(`✅ 成功加载 COROS 数据（${state.daily.length} 天每日指标, ${state.sleep.length} 天睡眠, ${state.activities.length} 条活动）`, 'success');
+    }
+
+    showLoading(false);
+    renderAll();
+
+  } catch (e) {
+    console.error('API Error:', e);
+    showLoading(false);
+    document.getElementById('lastUpdate').textContent = '❌ 加载失败';
+    showToast(`❌ 加载失败: ${e.message}，请确保 API 服务器已启动`, 'error');
+  }
+}
+
+/* ============================================================
+   CSV FILE UPLOAD (保留但默认隐藏)
+   ============================================================ */
+function handleFileUpload(event) {
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+  showLoading(true);
+  let pending = files.length;
+  files.forEach(file => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        if (result.data.length > 0) {
+          const type = detectType(result.meta.fields || []);
+          processData(type, result.data);
+        }
+        pending--;
+        if (pending === 0) {
+          showLoading(false);
+          renderAll();
+          showToast(`✅ 已加载 ${files.length} 个文件`, 'success');
+        }
+      },
+      error: () => {
+        pending--;
+        if (pending === 0) { showLoading(false); renderAll(); }
+      }
+    });
+  });
+}
+
+function processData(type, rows) {
+  const mapping = COL_MAP[type];
+  const parsed = rows.map(row => {
+    const m = mapColumns(row, mapping);
+    if (m.date) m.date = parseDate(m.date);
+    // convert numerics
+    for (const k of Object.keys(m)) {
+      if (k !== 'date' && k !== 'name' && k !== 'sport_type') {
+        const v = parseFloat(m[k]);
+        m[k] = isNaN(v) ? null : v;
+      }
+    }
+    return m;
+  }).filter(m => m.date instanceof Date && !isNaN(m.date));
+  parsed.sort((a,b) => a.date - b.date);
+  state[type] = [...state[type], ...parsed];
+  // deduplicate by date (for daily/sleep)
+  if (type !== 'activities') {
+    const seen = new Set();
+    state[type] = state[type].filter(r => {
+      const k = dateStr(r.date);
+      if (seen.has(k)) return false;
+      seen.add(k); return true;
+    });
+    state[type].sort((a,b) => a.date - b.date);
+  }
+}
+
+/* ============================================================
+   DRAG & DROP
+   ============================================================ */
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.csv'));
+  if (!files.length) { showToast('请上传 CSV 格式文件', 'error'); return; }
+  const input = document.getElementById('fileInput');
+  const dt = new DataTransfer();
+  files.forEach(f => dt.items.add(f));
+  input.files = dt.files;
+  handleFileUpload({ target: input });
+});
+
+/* ============================================================
+   SAMPLE DATA GENERATOR
+   ============================================================ */
+function loadSampleData() {
+  showLoading(true);
+  const rng = (min, max, dec=0) => {
+    const v = Math.random()*(max-min)+min;
+    return dec>0 ? Math.round(v*Math.pow(10,dec))/Math.pow(10,dec) : Math.round(v);
+  };
+  const now = new Date();
+  const days = 365;
+
+  // daily
+  const daily = [];
+  let vo2 = 52, rhr0 = 54, hrv0 = 55, load0 = 350, ati0 = 300, cti0 = 320;
+  for (let i = days; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate()-i);
+    // seasonal variation (better in summer)
+    const month = d.getMonth();
+    const seasonal = Math.sin((month-2)/12*2*Math.PI)*5;
+    vo2 = Math.max(40, Math.min(65, vo2 + rng(-0.3,0.5,1)));
+    rhr0 = Math.max(42, Math.min(70, rhr0 + rng(-0.5,0.5,0)));
+    hrv0 = Math.max(25, Math.min(90, hrv0 + rng(-2,2,0) + seasonal*0.1));
+    load0 = Math.max(50, Math.min(900, load0 + rng(-30,30,0)));
+    ati0 = Math.max(100, Math.min(700, ati0 + rng(-20,20,0)));
+    cti0 = Math.max(200, Math.min(600, cti0 * 0.97 + ati0 * 0.03));
+    daily.push({
+      date: new Date(d),
+      rhr: rhr0, hrv: hrv0, training_load: load0,
+      vo2max: vo2 + rng(-0.5,0.5,1),
+      ati: Math.round(ati0), cti: Math.round(cti0),
+      tired_rate: rng(15,85), distance: rng(3000,18000),
+      duration: rng(1200,7200), stamina: rng(60,95),
+      lthr: rng(158,172)
+    });
+  }
+
+  // sleep
+  const sleep = [];
+  for (let i = days; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate()-i);
+    const deep = rng(55,130), rem = rng(55,130), light = rng(160,320), awake = rng(8,45);
+    sleep.push({
+      date: new Date(d),
+      total_minutes: deep+rem+light+awake,
+      deep_minutes: deep, rem_minutes: rem,
+      light_minutes: light, awake_minutes: awake,
+      quality_score: rng(60,98)
+    });
+  }
+
+  // activities
+  const sports = [
+    { type:'跑步', name_pool:['晨跑','晚间长跑','节奏跑','间歇训练','5K测试'], avg_dist:[5000,15000], avg_dur:[1200,4500] },
+    { type:'骑行', name_pool:['公路骑行','山地越野','固定功率台'], avg_dist:[20000,80000], avg_dur:[3600,14400] },
+    { type:'游泳', name_pool:['自由泳训练','技术课','耐力游'], avg_dist:[1000,4000], avg_dur:[1800,5400] },
+    { type:'力量', name_pool:['核心训练','上肢力量','腿部强化'], avg_dist:[0,0], avg_dur:[1800,5400] },
+  ];
+  const activities = [];
+  for (let i = days; i >= 0; i -= rng(1,4)) {
+    const d = new Date(now); d.setDate(d.getDate()-i);
+    const sp = sports[Math.floor(Math.random()*sports.length)];
+    const dur = rng(sp.avg_dur[0], sp.avg_dur[1]);
+    const dist = sp.avg_dist[0]>0 ? rng(sp.avg_dist[0], sp.avg_dist[1]) : 0;
+    activities.push({
+      date: new Date(d),
+      name: sp.name_pool[Math.floor(Math.random()*sp.name_pool.length)],
+      sport_type: sp.type,
+      duration_seconds: dur,
+      distance_meters: dist,
+      avg_hr: rng(130,175),
+      calories: rng(200,900),
+      training_load: rng(100,500)
+    });
+  }
+  activities.sort((a,b)=>a.date-b.date);
+
+  state.daily = daily;
+  state.sleep = sleep;
+  state.activities = activities;
+  showLoading(false);
+  renderAll();
+  showToast('✅ 演示数据加载成功（365天）', 'success');
+}
+
+/* ============================================================
+   CLEAR DATA
+   ============================================================ */
+function clearAllData() {
+  state.daily = []; state.sleep = []; state.activities = [];
+  Object.values(state.charts).forEach(c => { try { c.destroy(); } catch(e){} });
+  state.charts = {};
+  renderAll();
+  document.getElementById('dataInfo').textContent = '尚未加载数据';
+  showToast('已清空所有数据');
+}
+
+/* ============================================================
+   FILTER BY RANGE
+   ============================================================ */
+function setRange(days, btn) {
+  state.rangeDays = days;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+}
+
+function filterByRange(arr) {
+  if (!arr.length) return arr;
+  if (state.rangeDays >= 9999) return arr;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - state.rangeDays);
+  return arr.filter(r => r.date >= cutoff);
+}
+
+/* ============================================================
+   VIEW SWITCHING
+   ============================================================ */
+function switchView(v) {
+  state.currentView = v;
+  ['overview','training','sleep','activities'].forEach(name => {
+    const el = document.getElementById('view-'+name);
+    if (el) el.style.display = name===v ? '' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    const views = ['overview','training','sleep','activities'];
+    btn.classList.toggle('active', views[i]===v);
+  });
+  renderAll();
+}
+
+/* ============================================================
+   RENDER ALL
+   ============================================================ */
+function renderAll() {
+  const daily = filterByRange(state.daily);
+  const sleep = filterByRange(state.sleep);
+  const activities = filterByRange(state.activities);
+
+  updateDataInfo(daily, sleep, activities);
+  updateRangeInfo(daily, sleep, activities);
+
+  if (state.currentView === 'overview') renderOverview(daily, sleep, activities);
+  if (state.currentView === 'training') renderTrainingView(daily, activities);
+  if (state.currentView === 'sleep') renderSleepView(sleep);
+  if (state.currentView === 'activities') renderActivitiesView(activities);
+}
+
+function updateDataInfo(daily, sleep, activities) {
+  const parts = [];
+  if (daily.length) parts.push(`每日指标 ${daily.length} 天`);
+  if (sleep.length) parts.push(`睡眠 ${sleep.length} 天`);
+  if (activities.length) parts.push(`活动 ${activities.length} 条`);
+  document.getElementById('dataInfo').textContent = parts.length ? parts.join(' · ') : '尚未加载数据';
+}
+
+function updateRangeInfo(daily, sleep, activities) {
+  const all = [...daily, ...sleep, ...activities].map(r=>r.date).filter(Boolean);
+  if (!all.length) { document.getElementById('rangeInfo').textContent = '-'; return; }
+  const minD = new Date(Math.min(...all.map(d=>d.getTime())));
+  const maxD = new Date(Math.max(...all.map(d=>d.getTime())));
+  document.getElementById('rangeInfo').textContent = `${dateStr(minD)} 至 ${dateStr(maxD)}，共 ${Math.round((maxD-minD)/86400000)+1} 天`;
+}
+
+/* ============================================================
+   METRICS GRID
+   ============================================================ */
+function renderOverview(daily, sleep, activities) {
+  renderMetricsGrid(daily, sleep, activities);
+  renderOverviewCharts(daily, sleep);
+}
+
+function avg(arr, key) {
+  const vals = arr.map(r=>r[key]).filter(v=>v!=null&&!isNaN(v));
+  return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+}
+function last(arr, key) {
+  for (let i = arr.length-1; i>=0; i--) {
+    if (arr[i][key]!=null&&!isNaN(arr[i][key])) return arr[i][key];
+  }
+  return null;
+}
+function fmt(v, dec=1) { return v==null ? '-' : (dec===0 ? Math.round(v) : v.toFixed(dec)); }
+function trendArrow(arr, key) {
+  if (arr.length < 7) return { dir:'flat', delta:0 };
+  const recent = arr.slice(-7).map(r=>r[key]).filter(v=>v!=null);
+  const older = arr.slice(-14,-7).map(r=>r[key]).filter(v=>v!=null);
+  if (!recent.length||!older.length) return { dir:'flat', delta:0 };
+  const rAvg = recent.reduce((a,b)=>a+b,0)/recent.length;
+  const oAvg = older.reduce((a,b)=>a+b,0)/older.length;
+  const delta = rAvg - oAvg;
+  const pct = Math.abs(delta/oAvg*100).toFixed(1);
+  if (Math.abs(delta/oAvg) < 0.02) return { dir:'flat', delta:0, pct };
+  return { dir: delta>0 ? 'up' : 'down', delta, pct };
+}
+
+function renderMetricsGrid(daily, sleep, activities) {
+  const grid = document.getElementById('metricsGrid');
+  if (!daily.length && !sleep.length && !activities.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">⌛</div><p>点击顶部「🔄 加载 COROS 数据」从 API 获取真实数据</p></div>`;
+    return;
+  }
+  const metrics = [];
+  if (daily.length) {
+    const vo2 = last(daily,'vo2max');
+    const rhrVal = avg(daily,'rhr');
+    const hrvVal = avg(daily,'hrv');
+    const loadVal = avg(daily,'training_load');
+    const ati = last(daily,'ati'), cti = last(daily,'cti');
+    const ratio = (ati&&cti&&cti>0) ? (ati/cti) : null;
+
+    metrics.push({ icon:'❤️', value: fmt(rhrVal,0)+' bpm', label:'平均静息心率', color:'#f85149', trend: trendArrow(daily,'rhr'), trendInvert:true });
+    metrics.push({ icon:'💓', value: fmt(hrvVal,0)+' ms', label:'平均HRV', color:'#3fb950', trend: trendArrow(daily,'hrv'), trendInvert:false });
+    if (vo2) metrics.push({ icon:'🫁', value: fmt(vo2,1), label:'VO2max (mL/kg/min)', color:'#00C8B5', trend: trendArrow(daily,'vo2max') });
+    if (loadVal) metrics.push({ icon:'⚡', value: fmt(loadVal,0), label:'平均训练负荷', color:'#d29922', trend: trendArrow(daily,'training_load') });
+    if (ratio) {
+      const ratioOk = ratio >= 0.8 && ratio <= 1.3;
+      metrics.push({ icon:'⚖️', value: fmt(ratio,2), label:'ATI/CTI 负荷比', color: ratioOk ? '#3fb950' : '#f85149', badge: ratio<0.8?'过轻':ratio>1.5?'过训风险':ratio>1.3?'偏高':'平衡', badgeClass: ratioOk?'status-good':'status-warn' });
+    }
+    const dist7 = daily.slice(-7).reduce((s,r)=>s+(r.distance||0),0)/1000;
+    metrics.push({ icon:'📏', value: fmt(dist7,1)+' km', label:'近7天总距离', color:'#5b9cf6' });
+  }
+  if (sleep.length) {
+    const totalAvg = avg(sleep,'total_minutes');
+    const qualityAvg = avg(sleep,'quality_score');
+    const deepAvg = avg(sleep,'deep_minutes');
+    const deepPct = totalAvg ? deepAvg/totalAvg*100 : null;
+    if (totalAvg) metrics.push({ icon:'💤', value: fmt(totalAvg/60,1)+' h', label:'平均睡眠时长', color:'#a78bfa', trend: trendArrow(sleep,'total_minutes') });
+    if (qualityAvg) metrics.push({ icon:'🌙', value: fmt(qualityAvg,0), label:'平均睡眠质量分', color:'#3b6eff' });
+    if (deepPct) metrics.push({ icon:'🔵', value: fmt(deepPct,1)+'%', label:'深睡眠占比', color:'#3b6eff' });
+  }
+  if (activities.length) {
+    metrics.push({ icon:'🏅', value: activities.length, label:'本期活动次数', color:'#00C8B5' });
+    const totalCal = activities.reduce((s,r)=>s+(r.calories||0),0);
+    if (totalCal) metrics.push({ icon:'🔥', value: (totalCal/1000).toFixed(1)+' k', label:'总消耗热量 (kcal)', color:'#ff6b35' });
+  }
+
+  grid.innerHTML = metrics.map(m => {
+    const t = m.trend;
+    let trendHtml = '';
+    if (t) {
+      if (t.dir==='flat') trendHtml = `<div class="trend trend-flat">→ 持平</div>`;
+      else {
+        const good = m.trendInvert ? t.dir==='down' : t.dir==='up';
+        trendHtml = `<div class="trend ${good?'trend-up':'trend-down'}">${t.dir==='up'?'↑':'↓'} ${t.pct}%</div>`;
+      }
+    }
+    const badgeHtml = m.badge ? `<div class="status-badge ${m.badgeClass}" style="margin-top:6px;font-size:11px;">${m.badge}</div>` : '';
+    return `<div class="metric-card" style="--accent-color:${m.color}">
+      <div class="icon">${m.icon}</div>
+      <div class="value" style="color:${m.color}">${m.value}</div>
+      <div class="label">${m.label}</div>
+      ${trendHtml}${badgeHtml}
+    </div>`;
+  }).join('');
+}
+
+/* ============================================================
+   CHART HELPERS
+   ============================================================ */
+const CHART_COLORS = {
+  primary: '#00C8B5',
+  secondary: '#3b6eff',
+  tertiary: '#a78bfa',
+  warn: '#d29922',
+  danger: '#f85149',
+  good: '#3fb950',
+  text: '#8b949e',
+  grid: 'rgba(48,54,61,0.7)'
+};
+
+function destroyChart(id) {
+  if (state.charts[id]) {
+    try { state.charts[id].destroy(); } catch(e){}
+    delete state.charts[id];
+  }
+}
+
+function defaultChartOpts(title='') {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: CHART_COLORS.text, font: { size: 12 }, boxWidth: 12 } },
+      title: { display: false },
+      tooltip: {
+        backgroundColor: '#1c2128',
+        titleColor: '#e6edf3',
+        bodyColor: '#8b949e',
+        borderColor: '#21262d',
+        borderWidth: 1,
+        padding: 10
+      }
+    },
+    scales: {
+      x: {
+        type: 'time',
+        time: { unit: 'day', tooltipFormat: 'yyyy-MM-dd', displayFormats: { day: 'MM-dd' } },
+        grid: { color: CHART_COLORS.grid },
+        ticks: { color: CHART_COLORS.text, maxTicksLimit: 10 }
+      },
+      y: {
+        grid: { color: CHART_COLORS.grid },
+        ticks: { color: CHART_COLORS.text }
+      }
+    }
+  };
+}
+
+function makeChartCard(id, title, subtitle='', tall=false) {
+  return `<div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title"><span class="dot"></span>${title}</div>
+      <div class="chart-subtitle">${subtitle}</div>
+    </div>
+    <div class="chart-canvas-wrap ${tall?'tall':''}">
+      <canvas id="${id}"></canvas>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   OVERVIEW CHARTS
+   ============================================================ */
+function renderOverviewCharts(daily, sleep) {
+  const container = document.getElementById('overviewCharts');
+  if (!daily.length && !sleep.length) { container.innerHTML = ''; return; }
+  container.innerHTML = [
+    makeChartCard('chart-hrv-rhr','HRV & 静息心率趋势','每日变化'),
+    makeChartCard('chart-training-load','训练负荷趋势','ATI / CTI 负荷曲线'),
+    makeChartCard('chart-sleep-duration','睡眠时长趋势','每日睡眠分钟数'),
+    makeChartCard('chart-vo2max','VO2max 趋势','有氧能力变化')
+  ].join('');
+
+  // HRV + RHR
+  if (daily.length) {
+    destroyChart('chart-hrv-rhr');
+    state.charts['chart-hrv-rhr'] = new Chart(document.getElementById('chart-hrv-rhr'), {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: 'HRV (ms)', data: daily.map(r=>({x:r.date, y:r.hrv})),
+            borderColor: CHART_COLORS.good, backgroundColor: 'rgba(63,185,80,0.08)',
+            tension: 0.3, pointRadius: 1, fill: true, yAxisID: 'y'
+          },
+          {
+            label: '静息心率 (bpm)', data: daily.map(r=>({x:r.date, y:r.rhr})),
+            borderColor: CHART_COLORS.danger, backgroundColor: 'transparent',
+            tension: 0.3, pointRadius: 1, borderDash: [4,2], yAxisID: 'y2'
+          }
+        ]
+      },
+      options: { ...defaultChartOpts(), scales: {
+        x: defaultChartOpts().scales.x,
+        y: { ...defaultChartOpts().scales.y, title: { display:true, text:'HRV (ms)', color:CHART_COLORS.text }, position:'left' },
+        y2: { ...defaultChartOpts().scales.y, title: { display:true, text:'RHR (bpm)', color:CHART_COLORS.text }, position:'right', grid:{drawOnChartArea:false} }
+      }}
+    });
+
+    // Training Load
+    destroyChart('chart-training-load');
+    state.charts['chart-training-load'] = new Chart(document.getElementById('chart-training-load'), {
+      type: 'bar',
+      data: {
+        datasets: [
+          {
+            label: '每日训练负荷', data: daily.map(r=>({x:r.date, y:r.training_load})),
+            backgroundColor: 'rgba(0,200,181,0.25)', borderColor: CHART_COLORS.primary,
+            borderWidth: 1, type: 'bar', order: 2
+          },
+          {
+            label: 'ATI (急性)', data: daily.map(r=>({x:r.date, y:r.ati})),
+            borderColor: CHART_COLORS.warn, backgroundColor: 'transparent',
+            tension: 0.4, pointRadius: 0, type: 'line', order: 1
+          },
+          {
+            label: 'CTI (慢性)', data: daily.map(r=>({x:r.date, y:r.cti})),
+            borderColor: CHART_COLORS.secondary, backgroundColor: 'transparent',
+            tension: 0.4, pointRadius: 0, type: 'line', order: 0
+          }
+        ]
+      },
+      options: defaultChartOpts()
+    });
+
+    // VO2max
+    destroyChart('chart-vo2max');
+    state.charts['chart-vo2max'] = new Chart(document.getElementById('chart-vo2max'), {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: 'VO2max', data: daily.map(r=>({x:r.date, y:r.vo2max})),
+          borderColor: CHART_COLORS.primary, backgroundColor: 'rgba(0,200,181,0.1)',
+          tension: 0.4, pointRadius: 1, fill: true
+        }]
+      },
+      options: { ...defaultChartOpts(), scales: { ...defaultChartOpts().scales,
+        y: { ...defaultChartOpts().scales.y, title: { display:true, text:'mL/kg/min', color:CHART_COLORS.text }, min: 35 }
+      }}
+    });
+  }
+
+  // Sleep duration
+  if (sleep.length) {
+    destroyChart('chart-sleep-duration');
+    state.charts['chart-sleep-duration'] = new Chart(document.getElementById('chart-sleep-duration'), {
+      type: 'bar',
+      data: {
+        datasets: [
+          { label:'深睡眠', data: sleep.map(r=>({x:r.date,y:r.deep_minutes})), backgroundColor:'rgba(59,110,255,0.7)', stack:'sleep' },
+          { label:'浅睡眠', data: sleep.map(r=>({x:r.date,y:r.light_minutes})), backgroundColor:'rgba(139,180,248,0.5)', stack:'sleep' },
+          { label:'REM', data: sleep.map(r=>({x:r.date,y:r.rem_minutes})), backgroundColor:'rgba(167,139,250,0.7)', stack:'sleep' },
+          { label:'清醒', data: sleep.map(r=>({x:r.date,y:r.awake_minutes})), backgroundColor:'rgba(148,163,184,0.4)', stack:'sleep' }
+        ]
+      },
+      options: { ...defaultChartOpts(), scales: { ...defaultChartOpts().scales,
+        y: { ...defaultChartOpts().scales.y, stacked:true, title:{display:true,text:'分钟',color:CHART_COLORS.text} },
+        x: { ...defaultChartOpts().scales.x, stacked:true }
+      }}
+    });
+  }
+}
+
+/* ============================================================
+   TRAINING VIEW
+   ============================================================ */
+function renderTrainingView(daily, activities) {
+  const container = document.getElementById('trainingCharts');
+  if (!daily.length && !activities.length) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">💪</div><p>暂无训练数据</p></div>`;
+    return;
+  }
+  container.innerHTML = [
+    `<div class="full-width">${makeChartCard('chart-load-full','完整训练负荷图','ATI / CTI / 每日负荷',true)}</div>`,
+    makeChartCard('chart-rhr-trend','静息心率长期趋势','恢复状态指标'),
+    makeChartCard('chart-hrv-trend','HRV 长期趋势','神经系统状态'),
+    makeChartCard('chart-fatigure','疲劳指数趋势','0-100 越低越好'),
+    makeChartCard('chart-distance','每日跑量/距离','km'),
+    `<div class="full-width">${makeChartCard('chart-sport-dist','运动类型分布','按运动次数')}</div>`
+  ].join('');
+
+  if (daily.length) {
+    destroyChart('chart-load-full');
+    state.charts['chart-load-full'] = new Chart(document.getElementById('chart-load-full'), {
+      type: 'bar',
+      data: {
+        datasets: [
+          { label:'每日负荷', data: daily.map(r=>({x:r.date,y:r.training_load})), backgroundColor:'rgba(0,200,181,0.2)', borderColor:CHART_COLORS.primary, borderWidth:1, type:'bar', order:3 },
+          { label:'ATI 急性负荷', data: daily.map(r=>({x:r.date,y:r.ati})), borderColor:CHART_COLORS.warn, backgroundColor:'transparent', tension:0.4, pointRadius:0, type:'line', order:1 },
+          { label:'CTI 慢性负荷', data: daily.map(r=>({x:r.date,y:r.cti})), borderColor:CHART_COLORS.secondary, backgroundColor:'transparent', tension:0.4, pointRadius:0, type:'line', order:0 },
+          { label:'疲劳指数', data: daily.map(r=>({x:r.date,y:r.tired_rate})), borderColor:CHART_COLORS.danger, backgroundColor:'transparent', tension:0.4, pointRadius:0, borderDash:[3,3], type:'line', order:2, yAxisID:'y2' }
+        ]
+      },
+      options: { ...defaultChartOpts(), scales: {
+        x: defaultChartOpts().scales.x,
+        y: { ...defaultChartOpts().scales.y, title:{display:true,text:'负荷',color:CHART_COLORS.text} },
+        y2: { ...defaultChartOpts().scales.y, title:{display:true,text:'疲劳 (0-100)',color:CHART_COLORS.text}, position:'right', grid:{drawOnChartArea:false}, min:0, max:100 }
+      }}
+    });
+
+    const mkLine = (id, key, color, label, unit='') => {
+      destroyChart(id);
+      state.charts[id] = new Chart(document.getElementById(id), {
+        type:'line',
+        data:{ datasets:[{ label, data:daily.map(r=>({x:r.date,y:r[key]})), borderColor:color, backgroundColor:color.replace(')',',0.1)').replace('rgb','rgba'), tension:0.3, pointRadius:1, fill:true }] },
+        options:{ ...defaultChartOpts(), scales:{ ...defaultChartOpts().scales, y:{ ...defaultChartOpts().scales.y, title:{display:!!unit,text:unit,color:CHART_COLORS.text} } } }
+      });
+    };
+    mkLine('chart-rhr-trend','rhr',CHART_COLORS.danger,'静息心率','bpm');
+    mkLine('chart-hrv-trend','hrv',CHART_COLORS.good,'HRV','ms');
+    mkLine('chart-fatigure','tired_rate',CHART_COLORS.warn,'疲劳指数');
+    mkLine('chart-distance','distance','#5b9cf6','距离','m');
+  }
+
+  if (activities.length) {
+    destroyChart('chart-sport-dist');
+    const sportCount = {};
+    activities.forEach(a => { sportCount[a.sport_type||'其他'] = (sportCount[a.sport_type||'其他']||0)+1; });
+    const colors = ['rgba(63,185,80,0.7)','rgba(91,156,246,0.7)','rgba(0,200,181,0.7)','rgba(248,81,73,0.7)','rgba(167,139,250,0.7)','rgba(210,153,34,0.7)'];
+    state.charts['chart-sport-dist'] = new Chart(document.getElementById('chart-sport-dist'), {
+      type:'doughnut',
+      data:{ labels:Object.keys(sportCount), datasets:[{ data:Object.values(sportCount), backgroundColor:colors, borderColor:'#161b22', borderWidth:2 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{color:CHART_COLORS.text, font:{size:13}, padding:16} }, tooltip:{ backgroundColor:'#1c2128', titleColor:'#e6edf3', bodyColor:'#8b949e', borderColor:'#21262d', borderWidth:1 } } }
+    });
+  }
+}
+
+/* ============================================================
+   SLEEP VIEW
+   ============================================================ */
+function renderSleepView(sleep) {
+  const container = document.getElementById('sleepCharts');
+  if (!sleep.length) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">😴</div><p>暂无睡眠数据</p></div>`;
+    return;
+  }
+  container.innerHTML = [
+    `<div class="full-width">${makeChartCard('chart-sleep-stack','睡眠阶段堆积图','每日各阶段分钟数',true)}</div>`,
+    makeChartCard('chart-sleep-quality','睡眠质量分数','0-100分'),
+    makeChartCard('chart-sleep-hr','睡眠期间心率','bpm'),
+    makeChartCard('chart-sleep-pie','平均睡眠结构','各阶段占比'),
+    makeChartCard('chart-sleep-eff','深睡 + REM 时长趋势','有效睡眠指标')
+  ].join('');
+
+  destroyChart('chart-sleep-stack');
+  state.charts['chart-sleep-stack'] = new Chart(document.getElementById('chart-sleep-stack'), {
+    type:'bar',
+    data:{ datasets:[
+      { label:'深睡眠', data:sleep.map(r=>({x:r.date,y:r.deep_minutes})), backgroundColor:'rgba(59,110,255,0.75)', stack:'s' },
+      { label:'浅睡眠', data:sleep.map(r=>({x:r.date,y:r.light_minutes})), backgroundColor:'rgba(139,180,248,0.5)', stack:'s' },
+      { label:'REM', data:sleep.map(r=>({x:r.date,y:r.rem_minutes})), backgroundColor:'rgba(167,139,250,0.75)', stack:'s' },
+      { label:'清醒', data:sleep.map(r=>({x:r.date,y:r.awake_minutes})), backgroundColor:'rgba(148,163,184,0.4)', stack:'s' }
+    ]},
+    options:{ ...defaultChartOpts(), scales:{ ...defaultChartOpts().scales, x:{...defaultChartOpts().scales.x,stacked:true}, y:{...defaultChartOpts().scales.y,stacked:true,title:{display:true,text:'分钟',color:CHART_COLORS.text}} } }
+  });
+
+  destroyChart('chart-sleep-quality');
+  state.charts['chart-sleep-quality'] = new Chart(document.getElementById('chart-sleep-quality'), {
+    type:'line',
+    data:{ datasets:[{ label:'睡眠质量', data:sleep.map(r=>({x:r.date,y:r.quality_score})), borderColor:CHART_COLORS.secondary, backgroundColor:'rgba(59,110,255,0.1)', tension:0.3, pointRadius:2, fill:true }] },
+    options:{ ...defaultChartOpts(), scales:{ ...defaultChartOpts().scales, y:{...defaultChartOpts().scales.y,min:0,max:100} } }
+  });
+
+  destroyChart('chart-sleep-eff');
+  state.charts['chart-sleep-eff'] = new Chart(document.getElementById('chart-sleep-eff'), {
+    type:'line',
+    data:{ datasets:[
+      { label:'深睡眠', data:sleep.map(r=>({x:r.date,y:r.deep_minutes})), borderColor:CHART_COLORS.secondary, tension:0.3, pointRadius:1, fill:false },
+      { label:'REM睡眠', data:sleep.map(r=>({x:r.date,y:r.rem_minutes})), borderColor:CHART_COLORS.tertiary, tension:0.3, pointRadius:1, fill:false }
+    ]},
+    options:{ ...defaultChartOpts(), scales:{ ...defaultChartOpts().scales, y:{...defaultChartOpts().scales.y,title:{display:true,text:'分钟',color:CHART_COLORS.text}} } }
+  });
+
+  // Pie
+  const deepAvg = avg(sleep,'deep_minutes')||0;
+  const lightAvg = avg(sleep,'light_minutes')||0;
+  const remAvg = avg(sleep,'rem_minutes')||0;
+  const awakeAvg = avg(sleep,'awake_minutes')||0;
+  destroyChart('chart-sleep-pie');
+  state.charts['chart-sleep-pie'] = new Chart(document.getElementById('chart-sleep-pie'), {
+    type:'doughnut',
+    data:{ labels:['深睡眠','浅睡眠','REM','清醒'], datasets:[{ data:[deepAvg,lightAvg,remAvg,awakeAvg], backgroundColor:['rgba(59,110,255,0.8)','rgba(139,180,248,0.6)','rgba(167,139,250,0.8)','rgba(148,163,184,0.5)'], borderColor:'#161b22', borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{color:CHART_COLORS.text,font:{size:13},padding:16} }, tooltip:{ backgroundColor:'#1c2128', titleColor:'#e6edf3', bodyColor:'#8b949e', borderColor:'#21262d', borderWidth:1, callbacks:{ label: (ctx)=>`${ctx.label}: ${ctx.parsed.toFixed(0)} min` } } } }
+  });
+
+  // Sleep HR placeholder
+  destroyChart('chart-sleep-hr');
+  const hasHr = sleep.some(r=>r.avg_hr!=null);
+  if (hasHr) {
+    state.charts['chart-sleep-hr'] = new Chart(document.getElementById('chart-sleep-hr'), {
+      type:'line',
+      data:{ datasets:[{ label:'均心率', data:sleep.map(r=>({x:r.date,y:r.avg_hr})), borderColor:CHART_COLORS.danger, backgroundColor:'rgba(248,81,73,0.08)', tension:0.3, pointRadius:1, fill:true }] },
+      options:defaultChartOpts()
+    });
+  } else {
+    document.getElementById('chart-sleep-hr').closest('.chart-card').innerHTML += `<div class="empty-state" style="padding:16px;font-size:12px;">CSV 中无心率数据列</div>`;
+  }
+}
+
+/* ============================================================
+   ACTIVITIES VIEW
+   ============================================================ */
+function renderActivitiesView(activities) {
+  document.getElementById('actCount').textContent = activities.length + ' 条';
+  const tbody = document.getElementById('activityBody');
+  if (!activities.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">🏅</div><p>暂无活动数据</p></div></td></tr>`;
+    return;
+  }
+  const sorted = [...activities].sort((a,b)=>b.date-a.date);
+  const sportBadge = (type) => {
+    const t = String(type||'').toLowerCase();
+    if (t.includes('跑')||t.includes('run')) return `<span class="sport-badge badge-run">${type}</span>`;
+    if (t.includes('骑')||t.includes('ride')||t.includes('cycl')||t==='2') return `<span class="sport-badge badge-ride">${type}</span>`;
+    if (t.includes('游')||t.includes('swim')||t==='3') return `<span class="sport-badge badge-swim">${type}</span>`;
+    if (t.includes('力')||t.includes('strength')||t==='4') return `<span class="sport-badge badge-strength">${type}</span>`;
+    return `<span class="sport-badge badge-other">${type||'-'}</span>`;
+  };
+  tbody.innerHTML = sorted.map(a => {
+    const dur = a.duration_seconds ? `${Math.floor(a.duration_seconds/3600)?Math.floor(a.duration_seconds/3600)+'h ':''}${Math.floor(a.duration_seconds%3600/60)}min` : '-';
+    const dist = a.distance_meters ? (a.distance_meters/1000).toFixed(2)+' km' : '-';
+    return `<tr>
+      <td>${dateStr(a.date)}</td>
+      <td>${a.name||'-'}</td>
+      <td>${sportBadge(a.sport_type)}</td>
+      <td>${dur}</td>
+      <td>${dist}</td>
+      <td>${a.avg_hr ? a.avg_hr+' bpm' : '-'}</td>
+      <td>${a.calories ? Math.round(a.calories)+' kcal' : '-'}</td>
+      <td>${a.training_load ? Math.round(a.training_load) : '-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============================================================
+   EXPORT
+   ============================================================ */
+function exportCurrentView() {
+  const charts = Object.entries(state.charts);
+  if (!charts.length) { showToast('暂无图表可导出', 'error'); return; }
+  charts.forEach(([id, chart]) => {
+    const a = document.createElement('a');
+    a.href = chart.toBase64Image();
+    a.download = `coros_${id}.png`;
+    a.click();
+  });
+  showToast('✅ 已导出全部图表');
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ============================================================
+   LOADING
+   ============================================================ */
+function showLoading(show) {
+  document.getElementById('loadingEl').style.display = show ? 'block' : 'none';
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+renderAll();
+</script>
+</body>
+</html>

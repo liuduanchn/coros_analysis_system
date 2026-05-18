@@ -1,0 +1,13 @@
+# Local private settings
+config.py
+
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+
+# Local logs
+*.log
+
+# Local generated data/cache
+exports/
+reports/
